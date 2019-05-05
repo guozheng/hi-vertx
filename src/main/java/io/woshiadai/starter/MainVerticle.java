@@ -2,23 +2,48 @@ package io.woshiadai.starter;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 
 public class MainVerticle extends AbstractVerticle {
 
-  @Override
-  public void start(Future<Void> startFuture) throws Exception {
-    vertx.createHttpServer().requestHandler(req -> {
-      req.response()
-        .putHeader("content-type", "text/plain")
-        .end("Hello from Vert.x!");
-    }).listen(8888, http -> {
-      if (http.succeeded()) {
-        startFuture.complete();
-        System.out.println("HTTP server started on port 8888");
-      } else {
-        startFuture.fail(http.cause());
-      }
-    });
-  }
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
+
+    @Override
+    public void start(Future<Void> startFuture) throws Exception {
+        startHttpServer();
+    }
+
+    private Future<Void> startHttpServer() {
+        Future<Void> future = Future.future();
+        HttpServer server = vertx.createHttpServer();
+
+        Router router = Router.router(vertx);
+        router.get("/").handler(this::getRoot);
+
+        server.requestHandler(router)
+            .listen(8888, http -> {
+                if (http.succeeded()) {
+                    LOGGER.info("HTTP server started and running on port 8888");
+                    future.complete();
+                } else {
+                    LOGGER.info("Could not start HTTP server", http.cause());
+                    future.fail(http.cause());
+                }
+            });
+
+        return future;
+    }
+
+    private void getRoot(RoutingContext ctx) {
+        HttpServerResponse resp = (HttpServerResponse) ctx.response();
+        resp.putHeader("Content-Type", "text/plain");
+        resp.end("Hello from Vert.x!");
+    }
 
 }
