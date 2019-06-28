@@ -1,23 +1,23 @@
 plugins {
-  id 'java'
-  id 'application'
-  id 'com.github.johnrengelman.shadow' version '5.0.0'
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '5.0.0'
 }
 
 group = 'io.woshiadai'
 version = '1.0.0-SNAPSHOT'
 
 repositories {
-  mavenCentral()
+    mavenCentral()
 }
 
 ext {
-  vertxVersion = '3.7.0'
-  junitJupiterEngineVersion = '5.4.0'
+    vertxVersion = '3.7.0'
+    junitJupiterEngineVersion = '5.4.0'
 }
 
 application {
-  mainClassName = 'io.vertx.core.Launcher'
+    mainClassName = 'io.vertx.core.Launcher'
 }
 
 sourceCompatibility = '1.8'
@@ -27,33 +27,34 @@ def watchForChange = 'src/**/*'
 def doOnChange = './gradlew classes'
 
 dependencies {
-  implementation "io.vertx:vertx-core:$vertxVersion"
-  implementation "io.vertx:vertx-web:$vertxVersion"
-  implementation "io.vertx:vertx-web-client:$vertxVersion"
+    implementation "io.vertx:vertx-core:$vertxVersion"
+    implementation "io.vertx:vertx-web:$vertxVersion"
+    implementation "io.vertx:vertx-web-client:$vertxVersion"
+    runtime "io.netty:netty-tcnative-boringssl-static:2.0.23.Final"
 
-  testImplementation "io.vertx:vertx-junit5:$vertxVersion"
-  testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterEngineVersion"
-  testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterEngineVersion"
+    testImplementation "io.vertx:vertx-junit5:$vertxVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterEngineVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterEngineVersion"
 }
 
 
 shadowJar {
-  classifier = 'fat'
-  manifest {
-    attributes 'Main-Verticle': mainVerticleName
-  }
-  mergeServiceFiles {
-    include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
-  }
+    classifier = 'fat'
+    manifest {
+        attributes 'Main-Verticle': mainVerticleName
+    }
+    mergeServiceFiles {
+        include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
+    }
 }
 
 test {
-  useJUnitPlatform()
-  testLogging {
-    events 'PASSED', 'FAILED', 'SKIPPED'
-  }
+    useJUnitPlatform()
+    testLogging {
+        events 'PASSED', 'FAILED', 'SKIPPED'
+    }
 }
 
 run {
-  args = ['run', mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=$mainClassName", "--on-redeploy=$doOnChange"]
+    args = ['run', mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=$mainClassName", "--on-redeploy=$doOnChange"]
 }

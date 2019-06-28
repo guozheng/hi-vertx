@@ -2,10 +2,7 @@ package io.woshiadai.starter;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.http.*;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.JksOptions;
@@ -17,21 +14,23 @@ public class MainVerticle extends AbstractVerticle {
     private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 
     @Override
-    public void start(Future<Void> startFuture) throws Exception {
+    public void start(Future<Void> startFuture) {
         startHttpServer();
+        LOGGER.info("Server started...");
     }
 
     private Future<Void> startHttpServer() {
         Future<Void> future = Future.future();
-        HttpServer server = vertx.createHttpServer(new HttpServerOptions()
-            .setSsl(true)
-            .setKeyStoreOptions(new JksOptions()
-                .setPath("server-keystore.jks")
-                .setPassword("secret"))
+        HttpServer server = vertx.createHttpServer(
+//                new HttpServerOptions()
+//            .setSsl(true)
+//            .setKeyStoreOptions(new JksOptions()
+//                .setPath("server-keystore.jks")
+//                .setPassword("secret"))
         );
 
         Router router = Router.router(vertx);
-        router.get("/").handler(this::getRoot);
+        router.get("/google").handler(this::makeRequest);
 
         server.requestHandler(router)
             .listen(8888, http -> {
@@ -47,10 +46,34 @@ public class MainVerticle extends AbstractVerticle {
         return future;
     }
 
-    private void getRoot(RoutingContext ctx) {
-        HttpServerResponse resp = (HttpServerResponse) ctx.response();
-        resp.putHeader("Content-Type", "text/plain");
-        resp.end("Hello from Vert.x!");
+    private void makeRequest(RoutingContext ctx) {
+        HttpServerResponse serverResp = ctx.response();
+
+        HttpClientOptions options = new HttpClientOptions()
+                .setProtocolVersion(HttpVersion.HTTP_2)
+                .setSsl(true)
+                .setUseAlpn(true)
+                .setTrustAll(true);
+        HttpClient client = vertx.createHttpClient(options);
+
+        HttpClientRequest req = client.get(443, "www.google.com", "/");
+
+        req.handler(resp -> {
+            LOGGER.info("Got response: " + resp.statusCode());
+            serverResp.putHeader("Content-Type", "text/html")
+                    .setStatusCode(200)
+                    .end("Got response from google.com");
+        });
+
+        req.exceptionHandler(err -> {
+            LOGGER.error("Error: {}", err);
+            serverResp.putHeader("Content-Type", "text/plain")
+                    .setStatusCode(500)
+                    .end();
+
+        });
+
+        req.end();
     }
 
 }
