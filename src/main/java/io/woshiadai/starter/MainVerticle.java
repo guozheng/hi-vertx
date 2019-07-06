@@ -60,9 +60,9 @@ public class MainVerticle extends AbstractVerticle {
 
         req.handler(resp -> {
             LOGGER.info("Got response: " + resp.statusCode());
-            serverResp.putHeader("Content-Type", "text/html")
-                    .setStatusCode(200)
-                    .end("Got response from google.com");
+            serverResp.putHeader("Content-Type", "text/html; charset=ISO-8859-1")
+                    .setStatusCode(200);
+            resp.bodyHandler(buf -> serverResp.end(buf.toString()));
         });
 
         req.exceptionHandler(err -> {

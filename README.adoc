@@ -4,7 +4,7 @@ image:https://img.shields.io/badge/vert.x-3.7.0-purple.svg[link="https://vertx.i
 
 This application was generated using http://start.vertx.io
 
-== Building
+== Build and Run
 
 To launch your tests:
 ```
@@ -20,6 +20,8 @@ To run your application:
 ```
 ./gradlew clean run
 ```
+
+Then point your browser to `http://localhost:8888/google` and you should see a proxy-ed google page (images broken).
 
 == Help
 
