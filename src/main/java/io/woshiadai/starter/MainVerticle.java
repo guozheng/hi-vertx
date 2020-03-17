@@ -2,12 +2,14 @@ package io.woshiadai.starter;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.http.*;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.net.JksOptions;
+import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MainVerticle extends AbstractVerticle {
 
@@ -15,6 +17,13 @@ public class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(Future<Void> startFuture) {
+        // set vertx logger delegate factory to slf4j
+        String logFactory = System.getProperty("org.vertx.logger-delegate-factory-class-name");
+        if (logFactory == null) {
+            System.setProperty("org.vertx.logger-delegate-factory-class-name",
+                    SLF4JLogDelegateFactory.class.getName());
+        }
+
         startHttpServer();
         LOGGER.info("Server started...");
     }
@@ -30,7 +39,22 @@ public class MainVerticle extends AbstractVerticle {
         );
 
         Router router = Router.router(vertx);
-        router.get("/google").handler(this::makeRequest);
+
+        // set router options
+        router.route().handler(BodyHandler.create().setBodyLimit(10 * 1024 * 1024)); // 10MB max body size
+        router.route().handler(ResponseTimeHandler.create()); // add a response header: x-response-time: xyzms
+        router.route().handler(TimeoutHandler.create(500)); // request timeout in ms
+        router.route().failureHandler(ErrorHandler.create(false)); // no exception details
+
+        // use customized request logger
+        // there are three logger format: DEFAULT, SHORT, TINY, see Slf4jRequestLogger.java for details
+        // you can make it configurable, e.g. dev using DEFAULT, prod using TINY
+        LoggerFormat loggerFormat = LoggerFormat.DEFAULT;
+        router.route().handler(RequestLogHandler.create(loggerFormat));
+
+        // set routes and handlers
+        router.get("/postman").handler(this::getPostmanEcho);
+        router.post("/postman").handler(this::postPostmanEcho);
 
         server.requestHandler(router)
             .listen(8888, http -> {
@@ -46,9 +70,12 @@ public class MainVerticle extends AbstractVerticle {
         return future;
     }
 
-    private void makeRequest(RoutingContext ctx) {
-        HttpServerResponse serverResp = ctx.response();
-
+    /**
+     * GET request to postman echo service, see: https://docs.postman-echo.com/?version=latest
+     *
+     * @param ctx {@link RoutingContext} context object
+     */
+    private void getPostmanEcho(RoutingContext ctx) {
         HttpClientOptions options = new HttpClientOptions()
                 .setProtocolVersion(HttpVersion.HTTP_2)
                 .setSsl(true)
@@ -56,21 +83,64 @@ public class MainVerticle extends AbstractVerticle {
                 .setTrustAll(true);
         HttpClient client = vertx.createHttpClient(options);
 
-        HttpClientRequest req = client.get(443, "www.google.com", "/");
+        HttpClientRequest req = client.get(443, "postman-echo.com", "/get?foo1=bar1&foo2=bar2")
+                .setTimeout(2000);
+        MultiMap headers = req.headers();
+        headers.set("Accept", "application/json");
+
+        HttpServerResponse serverResp = ctx.response();
 
         req.handler(resp -> {
-            LOGGER.info("Got response: " + resp.statusCode());
-            serverResp.putHeader("Content-Type", "text/html; charset=ISO-8859-1")
+            LOGGER.info("Response from postman echo: {}", resp.statusCode());
+            serverResp.putHeader("Content-Type", "application/json")
                     .setStatusCode(200);
             resp.bodyHandler(buf -> serverResp.end(buf.toString()));
         });
 
         req.exceptionHandler(err -> {
-            LOGGER.error("Error: {}", err);
+            LOGGER.error("Error processing GET request: {}", err);
             serverResp.putHeader("Content-Type", "text/plain")
                     .setStatusCode(500)
                     .end();
 
+        });
+
+        req.end();
+    }
+
+    /**
+     * POST request to postman echo service, see: https://docs.postman-echo.com/?version=latest
+     *
+     * @param ctx {@link RoutingContext} context object
+     */
+    private void postPostmanEcho(RoutingContext ctx) {
+        HttpClientOptions options = new HttpClientOptions()
+                .setProtocolVersion(HttpVersion.HTTP_2)
+                .setSsl(true)
+                .setUseAlpn(true)
+                .setTrustAll(true);
+        HttpClient client = vertx.createHttpClient(options);
+
+        HttpClientRequest req = client.post(443, "postman-echo.com", "/post")
+                .setTimeout(2000);
+        MultiMap headers = req.headers();
+        headers.set("Accept", "application/json");
+        headers.set("Content-Type", "application/json");
+
+        HttpServerResponse serverResp = ctx.response();
+
+        req.handler(resp -> {
+            LOGGER.info("Response from postman echo: {}", resp.statusCode());
+            serverResp.putHeader("Content-Type", "application/json")
+                    .setStatusCode(200);
+            resp.bodyHandler(buf -> serverResp.end(buf.toString()));
+        });
+
+        req.exceptionHandler(err -> {
+            LOGGER.error("Error: processing POST request: {}", err);
+            serverResp.putHeader("Content-Type", "text/plain")
+                    .setStatusCode(500)
+                    .end();
         });
 
         req.end();

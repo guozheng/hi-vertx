@@ -12,7 +12,7 @@ repositories {
 }
 
 ext {
-    vertxVersion = '3.7.0'
+    vertxVersion = '3.8.5'
     junitJupiterEngineVersion = '5.4.0'
 }
 
@@ -30,6 +30,9 @@ dependencies {
     implementation "io.vertx:vertx-core:$vertxVersion"
     implementation "io.vertx:vertx-web:$vertxVersion"
     implementation "io.vertx:vertx-web-client:$vertxVersion"
+    implementation "io.vertx:vertx-codegen:$vertxVersion"
+    implementation "org.slf4j:slf4j-api:1.7.+"
+    implementation "ch.qos.logback:logback-classic:1.2.+"
     runtime "io.netty:netty-tcnative-boringssl-static:2.0.23.Final"
 
     testImplementation "io.vertx:vertx-junit5:$vertxVersion"
