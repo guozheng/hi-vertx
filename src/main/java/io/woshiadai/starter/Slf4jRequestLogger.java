@@ -1,7 +1,3 @@
-/*
- * Copyright (c) 2020. Roku Inc. All rights reserved.
- */
-
 package io.woshiadai.starter;
 
 import io.vertx.core.MultiMap;
