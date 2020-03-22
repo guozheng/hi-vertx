@@ -79,7 +79,7 @@ public class Slf4jRequestLogger implements RequestLogHandler {
     switch (this.format) {
       case DEFAULT:
         String referrer = headers.contains("referrer") ? headers.get("referrer") : headers.get("referer");
-        String userAgent = request.headers().get("user-agent");
+        String userAgent = headers.get("user-agent");
         String body = context.getBodyAsString().replaceAll("(\\r|\\n)", "");
         referrer = referrer == null ? "-" : referrer;
         userAgent = userAgent == null ? "-" : userAgent;
@@ -106,7 +106,7 @@ public class Slf4jRequestLogger implements RequestLogHandler {
             status,
             contentLength,
             headers.contains("referrer") ? headers.get("referrer") : headers.get("referer"),
-            request.headers().get("user-agent"),
+            headers.get("user-agent"),
             System.currentTimeMillis() - timestamp);
         break;
       case TINY:
